@@ -36,6 +36,8 @@ on init
 
     export LD_PRELOAD "libsony.so"
 
+    # Symbols required for camera blobs
+export LD_SHIM_LIBS "/system/lib/libcald_pal.so|libshim_cald.so:/system/lib/hw/camera.vendor.qcom.so|libshim_camera.so"
 
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
@@ -145,6 +147,9 @@ on boot
     write /sys/module/process_reclaim/parameters/pressure_max 70
     write /sys/module/process_reclaim/parameters/swap_opt_eff 30
 
+    # Wifi firmware reload path
+    chown wifi wifi /sys/module/wlan/parameters/fwpath
+
 # msm specific files that need to be created on /data
 on post-fs-data
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
@@ -220,11 +225,12 @@ service irsc_util /system/bin/irsc_util "/etc/sec_config"
     class main
     user root
     oneshot
+    seclabel u:r:irsc_util:s0
 
 service rmt_storage /system/bin/rmt_storage
     class core
     user root
-    group system
+    group system wakelock
 
 service config_bt_addr /system/bin/btnvtool -O
     class core
@@ -232,15 +238,15 @@ service config_bt_addr /system/bin/btnvtool -O
     group bluetooth radio
     oneshot
 
-service hciattach /system/bin/sh /system/etc/init.qcom.bt.sh
+service hci_attach /system/bin/sh /system/etc/init.qcom.bt.sh
     class late_start
     user bluetooth
-    group bluetooth net_bt_admin
+    group bluetooth
     disabled
     oneshot
 
 on property:bluetooth.hciattach=true
-    start hciattach
+    start hci_attach
 
 on property:bluetooth.hciattach=false
     setprop bluetooth.status off
@@ -249,31 +255,18 @@ on property:bluetooth.hciattach=false
 service qmuxd /system/bin/qmuxd
     class main
     user radio
-    group radio audio bluetooth gps qcom_diag
+    group radio audio bluetooth gps wakelock
 
 service netmgrd /system/bin/netmgrd
     class main
-    group radio
+    group radio system wakelock
 
 # Adjust socket buffer to enlarge TCP receive window for high bandwidth
 # but only if ro.data.large_tcp_window_size property is set.
 on property:ro.data.large_tcp_window_size=true
     write /proc/sys/net/ipv4/tcp_adv_win_scale  2
 
-service wpa_supplicant /system/bin/wpa_supplicant \
-    -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
-    -I/system/etc/wifi/wpa_supplicant_overlay.conf \
-    -e/data/misc/wifi/entropy.bin -g@android:wpa_wlan0
-    #   we will start as root and wpa_supplicant will switch to user wifi
-    #   after setting up the capabilities required for WEXT
-    #   user wifi
-    #   group wifi inet keystore
-    class main
-    socket wpa_wlan0 dgram 660 wifi wifi
-    disabled
-    oneshot
-
-service p2p_supplicant /system/bin/wpa_supplicant \
+service wpa_supplicant /system/vendor/bin/hw/wpa_supplicant \
     -ip2p0 -Dnl80211 -c/data/misc/wifi/p2p_supplicant.conf \
     -I/system/etc/wifi/p2p_supplicant_overlay.conf -N \
     -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \

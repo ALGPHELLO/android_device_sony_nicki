@@ -52,7 +52,7 @@ lib/hw/nfc.msm8960.so
 
 # Sensors
 bin/sensord
-lib/hw/sensors.default.so
+lib/hw/sensors.default.so:lib/sensors.nicki.so
 
 # TA
 bin/taimport
@@ -78,3 +78,6 @@ etc/firmware/tzsuntory.b02
 etc/firmware/tzsuntory.b03
 etc/firmware/tzsuntory.flist
 etc/firmware/tzsuntory.mdt
+
+#STLport
+vendor/lib/libstlport.so

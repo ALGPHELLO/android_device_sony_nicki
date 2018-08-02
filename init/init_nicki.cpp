@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <android-base/properties.h>
 #include "vendor_init.h"
 #include "property_service.h"
 #include "log.h"
@@ -45,6 +46,8 @@ static char tmp[BUF_SIZE];
 
 void ds_properties();
 
+using android::base::GetProperty;
+
 static int read_file2(const char *fname, char *data, int max_size)
 {
     int fd, rc;
@@ -54,7 +57,7 @@ static int read_file2(const char *fname, char *data, int max_size)
 
     fd = open(fname, O_RDONLY);
     if (fd < 0) {
-        ERROR("failed to open '%s'\n", fname);
+	LOG(ERROR) << "failed to open '" << fname << "'\n";
         return 0;
     }
 
@@ -104,6 +107,6 @@ void vendor_load_properties()
         property_set("ro.build.fingerprint", "Sony/C2004/C2004:4.3/15.5.A.1.5/eng.user.20140430.172301:user/release-keys");
     };
 
-    device = property_get("ro.product.device");
-    ERROR("setting build properties for %s device\n", device.c_str());
+    device = GetProperty("ro.product.device", "");
+    LOG(ERROR) << "setting build properties for device'" << device.c_str() << "'\n";
 }
